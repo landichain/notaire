@@ -1,7 +1,8 @@
 # Notaire SaaS: Discovery and Project Plan
 
 > Status: **draft for validation**. No code has been written yet.
-> Decisions so far: **Morocco**, **French + Arabic (RTL)**, **web app**, **multi-office SaaS**.
+> Decisions so far: **Morocco**, **French + Arabic (RTL)**, **web app**, **multi-office SaaS**, **hosting in Morocco**.
+> No notaire advisor and no deed templates yet (see §8b).
 
 ---
 
@@ -62,7 +63,7 @@ Permissions are fine-grained (RBAC), and every sensitive action goes into an **a
    - **Checklist of required documents** for each deed type (certificat de propriété, quitus fiscal, note de renseignement urbanistique…).
    - Assigned clerk, deadlines and alerts.
 4. **Deeds (actes)**
-   - A **library of templates** in FR and AR, with variables filled in automatically from the file.
+   - A **template editor**: each office imports its own Word models (FR/AR) and inserts variables that are filled in automatically from the file.
    - Generates Word and PDF, with versions.
    - When signed: gets a **répertoire number**, is locked, and is archived as a minute.
 5. **Répertoire**: the official register, with automatic numbering per year. It can be exported and printed.
@@ -118,11 +119,11 @@ Every table carries a `tenant_id`, and isolation is enforced **in the database**
 | i18n | `next-intl`, **FR / AR with a full RTL mirror** | Matches your two languages |
 | Backend | **NestJS (TypeScript)** REST API, or Next.js server actions for the MVP | One language across the whole project |
 | Database | **PostgreSQL** + Prisma, with row-level security per tenant | Relational data, and strong tenant isolation |
-| Files | S3-compatible object storage, encrypted | Scans and deeds |
+| Files | MinIO (S3-compatible), self-hosted, encrypted | Scans and deeds |
 | Documents | `docxtemplater` for Word templates, Gotenberg/LibreOffice for PDF | Notaries work in Word |
 | Auth | Email + password + **2FA**, sessions, per-tenant RBAC | Data is sensitive |
 | Jobs | Queue (BullMQ + Redis) for alerts, PDF, emails | Deadlines and notifications |
-| Hosting | Docker. **Hosting in Morocco** (for example a Moroccan provider) or in an EU cloud, to decide with CNDP rules in mind | Loi 09-08 |
+| Hosting | **In Morocco (required)**: servers from a Moroccan provider, everything in Docker (PostgreSQL, MinIO, Redis). No managed foreign cloud services | Loi 09-08, data residency |
 | Quality | Tests (Vitest, Playwright), CI on GitHub Actions, daily backups | |
 
 The alternative is **Django + PostgreSQL**. It is faster for back-office screens, but the frontend would then be less modern. I recommend TypeScript end to end.
@@ -154,12 +155,22 @@ The alternative is **Django + PostgreSQL**. It is faster for back-office screens
 
 ---
 
+## 8b. Consequences of the discovery answers
+
+With no notaire and no templates, the app must ship **no legal content we cannot verify**. It provides the tools; each office supplies its own templates and validates its own rates.
+
+| Answer | Risk | What we do |
+|---|---|---|
+| No practising notaire | We build rules or workflows that are wrong, and notaries won't trust the app. | Recruit a paid notaire advisor (a few hours a month) before the pilot. Until then, work only from public texts: Loi 32-09, the CGI, ANCFCC fee rules. Every rate lives in an editable table that each office validates. The first pilot office acts as the validator. |
+| No deed templates | We cannot ship ready-made deeds. | Build a **template editor**: an office uploads its own Word models and inserts variables (parties, price, titre foncier…). Offer a starter template only after a notaire has validated it. |
+| Hosting in Morocco | No AWS, Azure or GCP region we can count on, so managed cloud services are not an option. | Rent servers or a private cloud from a Moroccan provider (for example N+ONE, inwi business, Maroc Telecom: to compare on price, SLA and certifications). Keep encrypted backups in a second Moroccan datacenter. Declare the processing to the CNDP. |
+
 ## 9. Open questions (to answer before coding)
 
-1. **Legal expert**: do you have a practising notaire who will validate the workflows, templates and rates?
-2. **Deed templates**: can you share real (anonymised) deeds in FR and AR?
+1. ~~**Legal expert**~~: none. Recruit a notaire advisor before the pilot.
+2. ~~**Deed templates**~~: none. Offices import their own through the template editor.
 3. **Deed language**: which deeds must be written in Arabic, in French, or in both?
-4. **Hosting**: must the data stay in Morocco? What budget is there for hosting?
+4. **Hosting**: data must stay in Morocco (decided). What is the monthly hosting budget?
 5. **Accounting**: which accounting software do offices use today? Do we export to it, or replace it?
 6. **Competition**: which software do Moroccan notaries use today, and what do they complain about?
 7. **Pricing model**: monthly subscription per office? Per user? Is there a free trial?
@@ -168,11 +179,13 @@ The alternative is **Django + PostgreSQL**. It is faster for back-office screens
 10. **Team and deadline**: who develops, and is there a target launch date?
 11. **Branding**: the product name, logo and colours.
 12. **Adouls**: are they out of scope? (They are a separate profession with their own rules.)
+13. **First pilot office**: do you know a notary office willing to test the app?
 
 ---
 
 ## 10. Next steps
-1. Answer the open questions in §9.
-2. Collect rates, templates and a checklist for each deed type from a notaire.
-3. Produce clickable **mockups** (UI in FR/AR) of the main screens: dashboard, file, deed, répertoire.
-4. Freeze the MVP scope, then start **Phase 1** (project setup).
+1. Find a notaire advisor (paid, part-time) and one pilot office. This is the biggest risk in the project.
+2. Compare Moroccan hosting providers on price, SLA, backups and certifications.
+3. Answer the remaining open questions in §9.
+4. Produce clickable **mockups** (UI in FR/AR) of the main screens: dashboard, file, deed, template editor, répertoire.
+5. Freeze the MVP scope, then start **Phase 1** (project setup).
